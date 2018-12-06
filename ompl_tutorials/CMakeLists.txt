@@ -106,6 +106,7 @@ find_package(ompl REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
+# INCLUDE_DIRS ${OMPL_INCLUDE_DIRS}
 #  LIBRARIES ompl_tutorials
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
@@ -152,6 +153,7 @@ add_dependencies(tutorial1 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED
 ## Specify libraries to link a library or executable target against
 target_link_libraries(tutorial1
   ${catkin_LIBRARIES}
+  ${OMPL_LIBRARIES}
 )
 
 #############
