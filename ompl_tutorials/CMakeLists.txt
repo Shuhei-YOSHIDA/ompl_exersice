@@ -138,6 +138,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/ompl_tutorials_node.cpp)
 add_executable(tutorial1 src/tutorial1.cpp)
+add_executable(tutorial2 src/tutorial2.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -149,9 +150,14 @@ add_executable(tutorial1 src/tutorial1.cpp)
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(tutorial1 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(tutorial2 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(tutorial1
+  ${catkin_LIBRARIES}
+  ${OMPL_LIBRARIES}
+)
+target_link_libraries(tutorial2
   ${catkin_LIBRARIES}
   ${OMPL_LIBRARIES}
 )

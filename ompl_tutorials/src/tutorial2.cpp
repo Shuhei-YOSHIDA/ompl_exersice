@@ -1,6 +1,6 @@
 /**
- * @file tutorial1.cpp
- * @brief use default planner
+ * @file tutorial2.cpp
+ * @brief check Connection between vertices and so on, by PRM
  */
 
 #include <ros/ros.h>
@@ -8,9 +8,11 @@
 
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/spaces/SE2StateSpace.h>
+#include <ompl/geometric/planners/prm/PRM.h>
 
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
+
 
 bool isStateValid(const ob::State *state)
 {
@@ -46,6 +48,30 @@ void planWithSimpleSetup()
   start->setXY(-0.9, -0.9);
   goal->setXY(0.9, 0.9);
   ss.setStartAndGoalStates(start, goal);
+
+  // Set Planner
+  auto prm_ptr = new og::PRM(ss.getSpaceInformation());
+  /// The your function that can reject a milestone connection. Default function is prepared.
+  auto filter_ = [&prm_ptr](const og::PRM::Vertex& v1, const og::PRM::Vertex& v2)
+  {
+    auto map = boost::get(og::PRM::vertex_state_t(), prm_ptr->getRoadmap());
+    auto state1 = map[v1];
+    auto state2 = map[v2];
+    std::cout << "x:" << state1->as<ob::SE2StateSpace::StateType>()->getX() << std::endl;
+
+    return true;
+  };
+  /// The function that specifies the milestones that connection attempts will be made to for a given milestone.
+  //auto strategy_ = [&prm_ptr](const og::PRM::Vertex v)
+  //{
+  //  vector<og::PRM::Vertex> milestones;
+  //  return milestones;
+  //};
+
+  prm_ptr->setConnectionFilter(filter_);
+  //prm_ptr->setConnectionStrategy(strategy_);
+  ob::PlannerPtr planner(prm_ptr);
+  ss.setPlanner(planner);
 
   // Execute planning
   double termination_time = 1.0;
