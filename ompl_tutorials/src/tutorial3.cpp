@@ -138,16 +138,49 @@ Path getResultantPath2(og::SimpleSetup& ss)
   return path_msg;
 }
 
+bool validArea(double x, double y, double z)
+{
+  double radius = 0.10;
+  vector<vector<double>> spheres =
+  {
+    {0., 0., 0.},
+    {+0.5, +0.5, +0.5},
+    {-0.5, +0.5, +0.5},
+    {-0.5, -0.5, +0.5},
+    {-0.5, +0.5, -0.5},
+    {-0.5, -0.5, -0.5},
+    {+0.5, -0.5, +0.5},
+    {+0.5, -0.5, -0.5},
+    {+0.5, +0.5, -0.5},
+  };
+
+  for (auto&& center : spheres)
+  {
+    double dx = x - center[0];
+    double dy = y - center[1];
+    double dz = z - center[2];
+
+    if (dx*dx + dy*dy + dz*dz <= radius)
+    {
+     return false;
+    }
+  }
+
+  return true;
+}
+
 bool isStateValid1(const ob::State *state)
 {
   const ob::SE3StateSpace::StateType *state_3d = state->as<ob::SE3StateSpace::StateType>();
   const double &x(state_3d->getX()), &y(state_3d->getY()), &z(state_3d->getZ());
 
   // If state is invalid,
-  if (std::fabs(x) < 0.5 && std::fabs(y) < 0.5 && std::fabs(z) < 0.5) return false;
+  //if (std::fabs(x) < 0.5 && std::fabs(y) < 0.5 && std::fabs(z) < 0.5) return false;
 
   // State is valid
-  return true;
+  //return true;
+
+  return validArea(x, y, z);
 }
 
 // SE3 without rotation
@@ -213,11 +246,12 @@ bool isStateValid2(const ob::State *state)
   const double x((*stateptr)[0]), y((*stateptr)[1]), z((*stateptr)[2]);
 
   // If state is invalid,
-  if (std::fabs(x) < 0.5 && std::fabs(y) < 0.5 && std::fabs(z) < 0.5) return false;
+  //if (std::fabs(x) < 0.5 && std::fabs(y) < 0.5 && std::fabs(z) < 0.5) return false;
 
   // State is valid
-  return true;
+  //return true;
 
+  return validArea(x, y, z);
 }
 
 // Pure R3 only for position
