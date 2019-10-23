@@ -4,16 +4,23 @@ project(ompl_tutorials)
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 
+# For ros-kinetic-ompl package
+# ros-kinetic-ompl seems to be not based on template of cmake for catkin
+set(ompl_DIR $ENV{ROS_ROOT}/../ompl/)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
+  ompl
+  color_names
+  easy_marker
   cmake_modules
 )
 
-find_package(ompl REQUIRED)
+#find_package(ompl REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -139,6 +146,7 @@ include_directories(
 # add_executable(${PROJECT_NAME}_node src/ompl_tutorials_node.cpp)
 add_executable(tutorial1 src/tutorial1.cpp)
 add_executable(tutorial2 src/tutorial2.cpp)
+add_executable(tutorial3 src/tutorial3.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -151,6 +159,7 @@ add_executable(tutorial2 src/tutorial2.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(tutorial1 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(tutorial2 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(tutorial3 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(tutorial1
@@ -158,6 +167,10 @@ target_link_libraries(tutorial1
   ${OMPL_LIBRARIES}
 )
 target_link_libraries(tutorial2
+  ${catkin_LIBRARIES}
+  ${OMPL_LIBRARIES}
+)
+target_link_libraries(tutorial3
   ${catkin_LIBRARIES}
   ${OMPL_LIBRARIES}
 )

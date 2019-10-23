@@ -1,0 +1,5 @@
+OMPL に関するメモ
+====
+
+* StateSpaceクラスの各空間に対する実装を指すSE3StateSpaceやRealVectorStateSpace クラスにはそのクラス内クラスとしてStateTypeというクラスがあり，
+setXYZや配列添字のオペレータといったsetter/getterが準備されている
