@@ -1,8 +1,7 @@
 /**
- * @file tutorial3.cpp
- * @brief SE3とR3の違い
- * @details サンプリングに基づく探索で，SE3とR3ではその結果がどう変わるか.
- *          simplifySolution を実行しない場合にも着目してみるとよい．
+ * @file tutorial4.cpp
+ * @brief OptimizationDefinition を使用
+ *        simplifySolutionを実行しない場合に着目しても面白い?
  */
 
 #include <ros/ros.h>
@@ -13,7 +12,8 @@
 #include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/geometric/planners/prm/PRM.h>
-#include <ompl/geometric/planners/prm/PRM.h>
+#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
+
 #include <color_names/color_names.h>
 #include <easy_marker/easy_marker.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -78,7 +78,7 @@ MarkerArray showRoadmapAsMarker(og::SimpleSetup& ss, vector<string> colors)
 }
 
 // For SE3StateSpace
-Path getResultantPath1(og::SimpleSetup& ss)
+Path getResultantPathSE3(og::SimpleSetup& ss)
 {
   Path path_msg;
   auto path_states = ss.getSolutionPath().getStates();
@@ -99,37 +99,6 @@ Path getResultantPath1(og::SimpleSetup& ss)
     ps.pose.orientation.x = st->rotation().x;
     ps.pose.orientation.y = st->rotation().y;
     ps.pose.orientation.z = st->rotation().z;
-
-    // Set data
-    path_msg.poses.push_back(ps);
-  }
-
-  return path_msg;
-}
-
-// For RealVectorStateSpace (R3)
-Path getResultantPath2(og::SimpleSetup& ss)
-{
-  Path path_msg;
-  auto path_states = ss.getSolutionPath().getStates();
-  std_msgs::Header header;
-  header.frame_id = "world";
-  header.stamp = ros::Time::now();
-  path_msg.header = header;
-  for (auto&& state : path_states)
-  {
-    // R3
-    geometry_msgs::PoseStamped ps;
-    ps.header = header;
-    //auto st = state->as<ob::SE3StateSpace::StateType>();
-    auto st = state->as<ob::RealVectorStateSpace::StateType>();
-    ps.pose.position.x = (*st)[0];
-    ps.pose.position.y = (*st)[1];
-    ps.pose.position.z = (*st)[2];
-    ps.pose.orientation.w = 1.0;
-    ps.pose.orientation.x = 0.0;
-    ps.pose.orientation.y = 0.0;
-    ps.pose.orientation.z = 0.0;
 
     // Set data
     path_msg.poses.push_back(ps);
@@ -169,39 +138,8 @@ bool validArea(double x, double y, double z)
   return true;
 }
 
-MarkerArray obstacleArea()
-{
-  double radius = 0.10;
-  vector<vector<double>> spheres =
-  {
-    {0., 0., 0.},
-    {+0.5, +0.5, +0.5},
-    {-0.5, +0.5, +0.5},
-    {-0.5, -0.5, +0.5},
-    {-0.5, +0.5, -0.5},
-    {-0.5, -0.5, -0.5},
-    {+0.5, -0.5, +0.5},
-    {+0.5, -0.5, -0.5},
-    {+0.5, +0.5, -0.5},
-  };
-
-  MarkerArray m_msg;
-  for (int i = 0; i < spheres.size(); i++)
-  {
-    Marker m = makeMarkerSPHERETemplate(1.0, "pink", "world");
-    m.id = i;
-    m.scale.x = m.scale.y = m.scale.z = 2*radius;
-    m.pose.position.x = spheres[i][0];
-    m.pose.position.y = spheres[i][1];
-    m.pose.position.z = spheres[i][2];
-
-    m_msg.markers.push_back(m);
-  }
-
-  return m_msg;
-}
-
-bool isStateValid1(const ob::State *state)
+// For SE3
+bool isStateValidSE3(const ob::State *state)
 {
   const ob::SE3StateSpace::StateType *state_3d = state->as<ob::SE3StateSpace::StateType>();
   const double &x(state_3d->getX()), &y(state_3d->getY()), &z(state_3d->getZ());
@@ -215,8 +153,8 @@ bool isStateValid1(const ob::State *state)
   return validArea(x, y, z);
 }
 
-// SE3
-tuple<MarkerArray, Path> planWithSimpleSetup1()
+// SE3 without optimization
+tuple<MarkerArray, Path> planWithSimpleSetup()
 {
   // Definition of State space
   ob::StateSpacePtr space(new ob::SE3StateSpace());
@@ -231,7 +169,7 @@ tuple<MarkerArray, Path> planWithSimpleSetup1()
   og::SimpleSetup ss(space);
 
   // Register isStateValid to StateValidityChecker
-  ss.setStateValidityChecker(boost::bind(&isStateValid1, _1));
+  ss.setStateValidityChecker(boost::bind(&isStateValidSE3, _1));
 
   // Set Start and Goal state
   ob::ScopedState<ob::SE3StateSpace> start(space), goal(space);
@@ -255,13 +193,12 @@ tuple<MarkerArray, Path> planWithSimpleSetup1()
   if (solved)
   {
     // Simplify the solution
-    ss.simplifySolution();
+    //ss.simplifySolution();
 
     std::cout << "planner name is " << ss.getPlanner()->getName() << std::endl;
     std::cout << "----------------" << std::endl;
     std::cout << "Found solution:" << std::endl;
     // Print the solution path to screen
-
     ss.getSolutionPath().print(std::cout);
     // Print the solution path to a file
     std::ofstream ofs("./path_SE3.dat");
@@ -269,63 +206,60 @@ tuple<MarkerArray, Path> planWithSimpleSetup1()
   }
   else std::cout << "No solution found" << std::endl;
 
-  Path path_msg = getResultantPath1(ss);
+  Path path_msg = getResultantPathSE3(ss);
   return make_tuple(showRoadmapAsMarker(ss, {"green", "red"}), path_msg);
 }
 
-bool isStateValid2(const ob::State *state)
+// SE3 with optimization
+tuple<MarkerArray, Path> planWithSimpleSetupAndOpt()
 {
-  const ob::RealVectorStateSpace::StateType *stateptr = state->as<ob::RealVectorStateSpace::StateType>();
-  const double x((*stateptr)[0]), y((*stateptr)[1]), z((*stateptr)[2]);
-
-  // If state is invalid,
-  //if (std::fabs(x) < 0.5 && std::fabs(y) < 0.5 && std::fabs(z) < 0.5) return false;
-
-  // State is valid
-  //return true;
-
-  return validArea(x, y, z);
-}
-
-// Pure R3 only for position
-tuple<MarkerArray, Path> planWithSimpleSetup2()
-{
-  const int DIMENSION_SIZE = 3;
   // Definition of State space
-  ob::StateSpacePtr space(new ob::RealVectorStateSpace(DIMENSION_SIZE));
+  ob::StateSpacePtr space(new ob::SE3StateSpace());
 
   // Definition of Boundary and register it to StateSpace
   ob::RealVectorBounds bounds(3);
   bounds.setLow(-1);
   bounds.setHigh(1);
-  space->as<ob::RealVectorStateSpace>()->setBounds(bounds);
+  space->as<ob::SE3StateSpace>()->setBounds(bounds);
 
   // Instance of SimpleSetup for geometric (It is possible to write codes without SimpleSetup)
   og::SimpleSetup ss(space);
 
   // Register isStateValid to StateValidityChecker
-  ss.setStateValidityChecker(boost::bind(&isStateValid2, _1));
+  ss.setStateValidityChecker(boost::bind(&isStateValidSE3, _1));
 
   // Set Start and Goal state
-  ob::ScopedState<ob::StateSpace> start(space), goal(space);
-  start[0] = -0.9;
-  start[1] = -0.9;
-  start[2] = -0.9;
-  goal[0] = +0.9;
-  goal[1] = +0.9;
-  goal[2] = +0.9;
+  ob::ScopedState<ob::SE3StateSpace> start(space), goal(space);
+  start->setXYZ(-0.9, -0.9, -0.9);
+  goal->setXYZ(0.9, 0.9, 0.9);
+  start->rotation().x = 0.;
+  start->rotation().y = 0.;
+  start->rotation().z = 0.;
+  start->rotation().w = 1.;
+  goal->rotation().x = 0.;
+  goal->rotation().y = 0.;
+  goal->rotation().z = 0.;
+  goal->rotation().w = 1.;
   ss.setStartAndGoalStates(start, goal);
+
+  // Planner for optimization
+  ob::PlannerPtr planner(new og::PRM(ss.getSpaceInformation()));
+  ss.setPlanner(planner);
+
+  // Optimization objective
+  ob::OptimizationObjectivePtr opt_obj(new ob::PathLengthOptimizationObjective(ss.getSpaceInformation()));
+  ss.setOptimizationObjective(opt_obj);
+  cout << "Optimization objective is " << ss.getOptimizationObjective()->getDescription() << endl;
 
   // Execute planning
   double termination_time = 10.0;
   ob::PlannerStatus solved = ss.solve(termination_time);
 
-
   // Show a result
   if (solved)
   {
     // Simplify the solution
-    ss.simplifySolution();
+    //ss.simplifySolution();
 
     std::cout << "planner name is " << ss.getPlanner()->getName() << std::endl;
     std::cout << "----------------" << std::endl;
@@ -333,37 +267,34 @@ tuple<MarkerArray, Path> planWithSimpleSetup2()
     // Print the solution path to screen
     ss.getSolutionPath().print(std::cout);
     // Print the solution path to a file
-    std::ofstream ofs("./path_R3.dat");
+    std::ofstream ofs("./path_SE3Opt.dat");
     ss.getSolutionPath().printAsMatrix(ofs);
   }
   else std::cout << "No solution found" << std::endl;
 
-  Path path_msg = getResultantPath2(ss);
+  Path path_msg = getResultantPathSE3(ss);
   return make_tuple(showRoadmapAsMarker(ss, {"blue", "purple"}), path_msg);
 }
 
+
+
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "ompl_tutorial3");
+  ros::init(argc, argv, "ompl_tutorial4");
   ros::NodeHandle nh;
 
-  auto msgs1 = planWithSimpleSetup1();
-  auto msgs2 = planWithSimpleSetup2();
+  auto msgs1 = planWithSimpleSetup();
+  auto msgs2 = planWithSimpleSetupAndOpt();
 
   auto roadmap_msg1 = std::get<0>(msgs1);
   auto roadmap_msg2 = std::get<0>(msgs2);
   auto path_msg1 = std::get<1>(msgs1);
   auto path_msg2 = std::get<1>(msgs2);
 
-  auto obs_marker = obstacleArea();
-
   auto roadmap_pub1 = nh.advertise<MarkerArray>("roadmap1", 1);
   auto roadmap_pub2 = nh.advertise<MarkerArray>("roadmap2", 1);
   auto path_pub1 = nh.advertise<Path>("path1", 1);
   auto path_pub2 = nh.advertise<Path>("path2", 1);
-
-  auto obs_pub = nh.advertise<MarkerArray>("env_objects", 1);
-
   ros::Rate loop(1);
   while(ros::ok())
   {
@@ -374,14 +305,11 @@ int main(int argc, char** argv)
     path_msg2.header.stamp = stamp;
     for (auto&& m : path_msg1.poses) m.header.stamp = stamp;
     for (auto&& m : path_msg2.poses) m.header.stamp = stamp;
-    for (auto&& m : obs_marker.markers) m.header.stamp = stamp;
 
     roadmap_pub1.publish(roadmap_msg1);
     roadmap_pub2.publish(roadmap_msg2);
     path_pub1.publish(path_msg1);
     path_pub2.publish(path_msg2);
-    obs_pub.publish(obs_marker);
-
     loop.sleep();
   }
   return 0;
