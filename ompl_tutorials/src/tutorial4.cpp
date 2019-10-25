@@ -237,6 +237,7 @@ tuple<MarkerArray, Path> planWithSimpleSetup()
     // Print the solution path to a file
     std::ofstream ofs("./path_SE3.dat");
     ss.getSolutionPath().printAsMatrix(ofs);
+    ss.print();
   }
   else std::cout << "No solution found" << std::endl;
 
@@ -303,6 +304,7 @@ tuple<MarkerArray, Path> planWithSimpleSetupAndOpt()
     // Print the solution path to a file
     std::ofstream ofs("./path_SE3Opt.dat");
     ss.getSolutionPath().printAsMatrix(ofs);
+    ss.print();
   }
   else std::cout << "No solution found" << std::endl;
 
