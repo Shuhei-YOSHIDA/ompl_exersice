@@ -364,6 +364,8 @@ int main(int argc, char** argv)
 
   auto obs_pub = nh.advertise<MarkerArray>("env_objects", 1);
 
+  ROS_INFO("publishing data...");
+
   ros::Rate loop(1);
   while(ros::ok())
   {

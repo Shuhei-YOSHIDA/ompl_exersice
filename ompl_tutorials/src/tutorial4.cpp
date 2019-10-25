@@ -2,6 +2,7 @@
  * @file tutorial4.cpp
  * @brief OptimizationDefinition を使用
  *        simplifySolutionを実行しない場合に着目しても面白い?
+ *        PlannerはPRMとPRMstar(PRMの最適化版)をそれぞれ使っている．
  */
 
 #include <ros/ros.h>
@@ -12,6 +13,7 @@
 #include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/geometric/planners/prm/PRM.h>
+#include <ompl/geometric/planners/prm/PRMstar.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 
 #include <color_names/color_names.h>
@@ -138,6 +140,38 @@ bool validArea(double x, double y, double z)
   return true;
 }
 
+MarkerArray obstacleArea()
+{
+  double radius = 0.10;
+  vector<vector<double>> spheres =
+  {
+    {0., 0., 0.},
+    {+0.5, +0.5, +0.5},
+    {-0.5, +0.5, +0.5},
+    {-0.5, -0.5, +0.5},
+    {-0.5, +0.5, -0.5},
+    {-0.5, -0.5, -0.5},
+    {+0.5, -0.5, +0.5},
+    {+0.5, -0.5, -0.5},
+    {+0.5, +0.5, -0.5},
+  };
+
+  MarkerArray m_msg;
+  for (int i = 0; i < spheres.size(); i++)
+  {
+    Marker m = makeMarkerSPHERETemplate(1.0, "pink", "world");
+    m.id = i;
+    m.scale.x = m.scale.y = m.scale.z = 2*radius;
+    m.pose.position.x = spheres[i][0];
+    m.pose.position.y = spheres[i][1];
+    m.pose.position.z = spheres[i][2];
+
+    m_msg.markers.push_back(m);
+  }
+
+  return m_msg;
+}
+
 // For SE3
 bool isStateValidSE3(const ob::State *state)
 {
@@ -193,7 +227,7 @@ tuple<MarkerArray, Path> planWithSimpleSetup()
   if (solved)
   {
     // Simplify the solution
-    //ss.simplifySolution();
+    ss.simplifySolution();
 
     std::cout << "planner name is " << ss.getPlanner()->getName() << std::endl;
     std::cout << "----------------" << std::endl;
@@ -243,7 +277,7 @@ tuple<MarkerArray, Path> planWithSimpleSetupAndOpt()
   ss.setStartAndGoalStates(start, goal);
 
   // Planner for optimization
-  ob::PlannerPtr planner(new og::PRM(ss.getSpaceInformation()));
+  ob::PlannerPtr planner(new og::PRMstar(ss.getSpaceInformation()));
   ss.setPlanner(planner);
 
   // Optimization objective
@@ -259,7 +293,7 @@ tuple<MarkerArray, Path> planWithSimpleSetupAndOpt()
   if (solved)
   {
     // Simplify the solution
-    //ss.simplifySolution();
+    ss.simplifySolution();
 
     std::cout << "planner name is " << ss.getPlanner()->getName() << std::endl;
     std::cout << "----------------" << std::endl;
@@ -291,10 +325,17 @@ int main(int argc, char** argv)
   auto path_msg1 = std::get<1>(msgs1);
   auto path_msg2 = std::get<1>(msgs2);
 
+  auto obs_marker = obstacleArea();
+
   auto roadmap_pub1 = nh.advertise<MarkerArray>("roadmap1", 1);
   auto roadmap_pub2 = nh.advertise<MarkerArray>("roadmap2", 1);
   auto path_pub1 = nh.advertise<Path>("path1", 1);
   auto path_pub2 = nh.advertise<Path>("path2", 1);
+
+  auto obs_pub = nh.advertise<MarkerArray>("env_objects", 1);
+
+  ROS_INFO("publishing data...");
+
   ros::Rate loop(1);
   while(ros::ok())
   {
@@ -305,11 +346,14 @@ int main(int argc, char** argv)
     path_msg2.header.stamp = stamp;
     for (auto&& m : path_msg1.poses) m.header.stamp = stamp;
     for (auto&& m : path_msg2.poses) m.header.stamp = stamp;
+    for (auto&& m : obs_marker.markers) m.header.stamp = stamp;
 
     roadmap_pub1.publish(roadmap_msg1);
     roadmap_pub2.publish(roadmap_msg2);
     path_pub1.publish(path_msg1);
     path_pub2.publish(path_msg2);
+    obs_pub.publish(obs_marker);
+
     loop.sleep();
   }
   return 0;
