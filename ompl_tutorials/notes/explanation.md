@@ -1,6 +1,8 @@
 OMPL に関するメモ
 ====
 
+*内容は不確か*
+
 * StateSpaceクラスの各空間に対する実装を指すSE3StateSpaceやRealVectorStateSpace クラスにはそのクラス内クラスとしてStateTypeというクラスがあり，
 setXYZや配列添字のオペレータといったsetter/getterが準備されている
 
@@ -35,7 +37,7 @@ SE3だと，position分の経路がかなりごちゃごちゃになるが，Opt
 
 * simplifySolutionを行うと，Roadmap上のnodeから外れた経路を生成するように見える．
 
-* simplifySolution は`ompl::geometric::PathSimplifier` クラスに基づいている．これはinterfaceでなくてconcreteな実装. `PathSimplifier::simplifyMax` や `PathSimplifier::simplify` で行われる．
+* simplifySolution は`ompl::geometric::PathSimplifier` クラスに基づいている．これはinterfaceでなくて直接実装. `PathSimplifier::simplifyMax` や `PathSimplifier::simplify` で行われる．
 これらは経路のvalidityを維持するようだ
 
 * `Pathsimplifier::simplify` では `Pathsimplifier` クラスに実装されたメソッドが呼ばれている
