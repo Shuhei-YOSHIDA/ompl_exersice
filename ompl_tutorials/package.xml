@@ -52,6 +52,8 @@
   <depend>sensor_msgs</depend>
   <depend>cmake_modules</depend>
   <depend>ompl</depend>
+  <depend>color_names</depend>
+  <depend>easy_marker</depend>
   <buildtool_depend>catkin</buildtool_depend>
 
 
